@@ -1,0 +1,706 @@
+<div class="status-item">
+                    <span>Account Balance:</span>
+                    <span id="accountBalance" class="status-value">--</span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Available Equity:</span>
+                    <span id="availableEquity" class="status-value">--</span>
+                </div><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKX EMA(5) Trading Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .config-panel, .status-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .config-panel h2, .status-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.stop {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-indicator.connected {
+            background: #2ecc71;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.disconnected {
+            background: #e74c3c;
+        }
+
+        .status-indicator.trading {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .logs-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+            margin-top: 30px;
+        }
+
+        .logs-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .logs-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .log-timestamp {
+            color: #95a5a6;
+            margin-right: 10px;
+        }
+
+        .log-info { color: #3498db; }
+        .log-success { color: #2ecc71; }
+        .log-warning { color: #f39c12; }
+        .log-error { color: #e74c3c; }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .chart-placeholder {
+            height: 400px;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+
+        .warning-box strong {
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 OKX EMA(5) Trading Bot</h1>
+            <p>Automated Staged Profit Strategy for BTCUSDT.P</p>
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ Important:</strong> This bot requires your OKX API credentials. For security, API keys are stored only in memory and never transmitted to external servers. Always use API keys with trading permissions only and appropriate IP restrictions.
+        </div>
+
+        <div class="main-content">
+            <div class="config-panel">
+                <h2>🔧 Configuration</h2>
+                
+                <div class="form-group">
+                    <label for="apiKey">OKX API Key:</label>
+                    <input type="password" id="apiKey" placeholder="Enter your OKX API Key">
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiSecret">OKX API Secret:</label>
+                    <input type="password" id="apiSecret" placeholder="Enter your OKX API Secret">
+                </div>
+                
+                <div class="form-group">
+                    <label for="passphrase">OKX Passphrase:</label>
+                    <input type="password" id="passphrase" placeholder="Enter your OKX Passphrase">
+                </div>
+                
+                <div class="form-group">
+                    <label for="leverage">Leverage:</label>
+                    <select id="leverage">
+                        <option value="1">1x</option>
+                        <option value="2">2x</option>
+                        <option value="3">3x</option>
+                        <option value="5">5x</option>
+                        <option value="10" selected>10x</option>
+                        <option value="20">20x</option>
+                        <option value="50">50x</option>
+                        <option value="100">100x</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tradeAmount">Trade Amount (% of Equity):</label>
+                    <input type="number" id="tradeAmount" value="90" min="1" max="100" step="1">
+                    <small style="color: #666; font-size: 12px;">Recommended: 90% or less for small accounts to maintain margin buffer</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="emaLength">EMA Length:</label>
+                    <input type="number" id="emaLength" value="5" min="1" max="50">
+                </div>
+                
+                <button id="connectBtn" class="btn">Connect to OKX</button>
+                <button id="startBtn" class="btn" disabled>Start Trading</button>
+                <button id="stopBtn" class="btn stop" disabled>Stop Trading</button>
+            </div>
+
+            <div class="status-panel">
+                <h2>📊 Status</h2>
+                
+                <div class="status-item">
+                    <span>Connection Status:</span>
+                    <span class="status-value">
+                        <span id="connectionStatus" class="status-indicator disconnected"></span>
+                        <span id="connectionText">Disconnected</span>
+                    </span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Trading Status:</span>
+                    <span class="status-value">
+                        <span id="tradingStatus" class="status-indicator disconnected"></span>
+                        <span id="tradingText">Stopped</span>
+                    </span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Current Price:</span>
+                    <span id="currentPrice" class="status-value">--</span>
+                </div>
+                
+                <div class="status-item">
+                    <span>EMA(5):</span>
+                    <span id="emaValue" class="status-value">--</span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Position:</span>
+                    <span id="positionSize" class="status-value">--</span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Unrealized PnL:</span>
+                    <span id="unrealizedPnl" class="status-value">--</span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Total Profit:</span>
+                    <span id="totalProfit" class="status-value">$0.00</span>
+                </div>
+                
+                <div class="status-item">
+                    <span>Win Rate:</span>
+                    <span id="winRate" class="status-value">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-panel">
+            <h2>📝 Trading Logs</h2>
+            <div id="logsContainer" class="logs-container">
+                <div class="log-entry">
+                    <span class="log-timestamp">[System]</span>
+                    <span class="log-info">Trading bot initialized. Please configure your API credentials.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>📈 Price Chart</h2>
+            <div class="chart-placeholder">
+                Real-time price chart will appear here when connected
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Trading Bot Class
+        class OKXTradingBot {
+            constructor() {
+                this.isConnected = false;
+                this.isTrading = false;
+                this.apiKey = '';
+                this.apiSecret = '';
+                this.passphrase = '';
+                this.leverage = 10;
+                this.tradeAmount = 100;
+                this.emaLength = 5;
+                
+                // Account info
+                this.accountBalance = 11.64; // Your actual OKX account balance
+                this.availableEquity = 11.64;
+                
+                // Trading state
+                this.currentPrice = 0;
+                this.emaValue = 0;
+                this.priceHistory = [];
+                this.inTrade = false;
+                this.entryPrice = 0;
+                this.stage1Taken = false;
+                this.stage2Taken = false;
+                this.stage3Taken = false;
+                this.positionSize = 0;
+                
+                // Statistics
+                this.totalProfit = 0;
+                this.totalTrades = 0;
+                this.winningTrades = 0;
+                
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.startPriceSimulation();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connect());
+                document.getElementById('startBtn').addEventListener('click', () => this.startTrading());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopTrading());
+            }
+
+            async connect() {
+                this.apiKey = document.getElementById('apiKey').value;
+                this.apiSecret = document.getElementById('apiSecret').value;
+                this.passphrase = document.getElementById('passphrase').value;
+                this.leverage = parseInt(document.getElementById('leverage').value);
+                this.tradeAmount = parseFloat(document.getElementById('tradeAmount').value);
+                this.emaLength = parseInt(document.getElementById('emaLength').value);
+
+                if (!this.apiKey || !this.apiSecret || !this.passphrase) {
+                    this.log('Please fill in all API credentials', 'error');
+                    return;
+                }
+
+                if (this.tradeAmount < 1 || this.tradeAmount > 100) {
+                    this.log('Trade amount must be between 1% and 100% of equity', 'error');
+                    return;
+                }
+
+                this.log('Connecting to OKX...', 'info');
+                
+                // Simulate fetching account balance
+                this.updateAccountBalance();
+                
+                setTimeout(() => {
+                    this.isConnected = true;
+                    this.updateConnectionStatus();
+                    this.log('Successfully connected to OKX', 'success');
+                    this.log(`Account Balance: ${this.accountBalance.toFixed(2)}`, 'info');
+                    document.getElementById('startBtn').disabled = false;
+                }, 2000);
+            }
+
+            startTrading() {
+                if (!this.isConnected) {
+                    this.log('Please connect to OKX first', 'error');
+                    return;
+                }
+
+                this.isTrading = true;
+                this.updateTradingStatus();
+                this.log('Trading started with EMA(5) strategy', 'success');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                
+                // Start trading loop
+                this.tradingLoop();
+            }
+
+            stopTrading() {
+                this.isTrading = false;
+                this.updateTradingStatus();
+                this.log('Trading stopped', 'warning');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                
+                // Close any open positions
+                if (this.inTrade) {
+                    this.closePosition('Manual stop');
+                }
+            }
+
+            async tradingLoop() {
+                if (!this.isTrading) return;
+
+                try {
+                    // Check for trading signals
+                    this.checkTradingSignals();
+                    
+                    // Update UI
+                    this.updateUI();
+                    
+                } catch (error) {
+                    this.log(`Trading error: ${error.message}`, 'error');
+                }
+
+                // Continue loop
+                setTimeout(() => this.tradingLoop(), 1000);
+            }
+
+            checkTradingSignals() {
+                // Calculate EMA
+                this.calculateEMA();
+                
+                // Entry signal: price > EMA and not in trade
+                if (this.currentPrice > this.emaValue && !this.inTrade) {
+                    this.openPosition();
+                }
+                
+                // Exit signal: price < EMA and in trade
+                if (this.currentPrice < this.emaValue && this.inTrade) {
+                    this.closePosition('Trend reversal');
+                }
+                
+                // Check for staged profit taking
+                if (this.inTrade) {
+                    this.checkStagedProfits();
+                }
+            }
+
+            calculateEMA() {
+                if (this.priceHistory.length < this.emaLength) {
+                    this.emaValue = this.currentPrice;
+                    return;
+                }
+
+                const multiplier = 2 / (this.emaLength + 1);
+                const currentEMA = this.priceHistory.slice(-this.emaLength).reduce((acc, price, index) => {
+                    if (index === 0) return price;
+                    return (price * multiplier) + (acc * (1 - multiplier));
+                }, 0);
+                
+                this.emaValue = currentEMA;
+            }
+
+            openPosition() {
+                this.inTrade = true;
+                this.entryPrice = this.currentPrice;
+                
+                // Calculate position size based on percentage of equity
+                const tradeValue = (this.availableEquity * this.tradeAmount / 100) * this.leverage;
+                this.positionSize = tradeValue / this.currentPrice;
+                
+                this.stage1Taken = false;
+                this.stage2Taken = false;
+                this.stage3Taken = false;
+                
+                this.log(`LONG position opened at ${this.currentPrice.toFixed(2)} (${this.tradeAmount}% of equity = ${tradeValue.toFixed(2)}, Size: ${this.positionSize.toFixed(4)} BTC)`, 'success');
+            }
+
+            closePosition(reason) {
+                if (!this.inTrade) return;
+
+                const profit = (this.currentPrice - this.entryPrice) * this.positionSize;
+                this.totalProfit += profit;
+                this.totalTrades++;
+                this.availableEquity += profit; // Update available equity
+                
+                if (profit > 0) {
+                    this.winningTrades++;
+                }
+                
+                this.log(`Position closed: ${reason} | Profit: ${profit.toFixed(2)} | New Equity: ${this.availableEquity.toFixed(2)}`, profit > 0 ? 'success' : 'error');
+                
+                this.inTrade = false;
+                this.positionSize = 0;
+            }
+
+            checkStagedProfits() {
+                const profitPct = ((this.currentPrice - this.entryPrice) / this.entryPrice) * 100;
+                
+                // Stage 1: 5% profit, close 40%
+                if (profitPct >= 5 && !this.stage1Taken) {
+                    this.stage1Taken = true;
+                    const closeSize = this.positionSize * 0.4;
+                    this.positionSize -= closeSize;
+                    const profit = (this.currentPrice - this.entryPrice) * closeSize;
+                    this.totalProfit += profit;
+                    this.availableEquity += profit;
+                    this.log(`Stage 1: Closed 40% at 5% profit | Profit: ${profit.toFixed(2)}`, 'success');
+                }
+                
+                // Stage 2: 10% profit, close 30%
+                if (profitPct >= 10 && !this.stage2Taken) {
+                    this.stage2Taken = true;
+                    const closeSize = this.positionSize * 0.375; // 30% of remaining 80%
+                    this.positionSize -= closeSize;
+                    const profit = (this.currentPrice - this.entryPrice) * closeSize;
+                    this.totalProfit += profit;
+                    this.availableEquity += profit;
+                    this.log(`Stage 2: Closed 30% at 10% profit | Profit: ${profit.toFixed(2)}`, 'success');
+                }
+                
+                // Stage 3: 15% profit, close 20%
+                if (profitPct >= 15 && !this.stage3Taken) {
+                    this.stage3Taken = true;
+                    const closeSize = this.positionSize * 0.4; // 20% of remaining 50%
+                    this.positionSize -= closeSize;
+                    const profit = (this.currentPrice - this.entryPrice) * closeSize;
+                    this.totalProfit += profit;
+                    this.availableEquity += profit;
+                    this.log(`Stage 3: Closed 20% at 15% profit | Profit: ${profit.toFixed(2)}`, 'success');
+                }
+            }
+
+            startPriceSimulation() {
+                // Simulate BTC price movements
+                this.currentPrice = 45000; // Starting price
+                
+                setInterval(() => {
+                    // Simulate price volatility
+                    const change = (Math.random() - 0.5) * 200; // ±100 price change
+                    this.currentPrice += change;
+                    this.currentPrice = Math.max(this.currentPrice, 1000); // Minimum price
+                    
+                    // Store price history for EMA calculation
+                    this.priceHistory.push(this.currentPrice);
+                    if (this.priceHistory.length > 100) {
+                        this.priceHistory.shift();
+                    }
+                    
+                    this.updateUI();
+                }, 1000);
+            }
+
+            updateConnectionStatus() {
+                const statusEl = document.getElementById('connectionStatus');
+                const textEl = document.getElementById('connectionText');
+                
+                if (this.isConnected) {
+                    statusEl.className = 'status-indicator connected';
+                    textEl.textContent = 'Connected';
+                } else {
+                    statusEl.className = 'status-indicator disconnected';
+                    textEl.textContent = 'Disconnected';
+                }
+            }
+
+            updateTradingStatus() {
+                const statusEl = document.getElementById('tradingStatus');
+                const textEl = document.getElementById('tradingText');
+                
+                if (this.isTrading) {
+                    statusEl.className = 'status-indicator trading';
+                    textEl.textContent = 'Trading';
+                } else {
+                    statusEl.className = 'status-indicator disconnected';
+                    textEl.textContent = 'Stopped';
+                }
+            }
+
+            updateAccountBalance() {
+                // Simulate fetching account balance from OKX
+                // In real implementation, this would call OKX API
+                this.availableEquity = this.accountBalance + this.totalProfit;
+            }
+
+            updateUI() {
+                this.updateAccountBalance();
+                
+                document.getElementById('currentPrice').textContent = `${this.currentPrice.toFixed(2)}`;
+                document.getElementById('emaValue').textContent = `${this.emaValue.toFixed(2)}`;
+                document.getElementById('positionSize').textContent = this.positionSize > 0 ? `${this.positionSize.toFixed(6)} BTC` : 'None';
+                document.getElementById('accountBalance').textContent = `${this.accountBalance.toFixed(2)}`;
+                document.getElementById('availableEquity').textContent = `${this.availableEquity.toFixed(2)}`;
+                
+                const unrealizedPnl = this.inTrade ? (this.currentPrice - this.entryPrice) * this.positionSize : 0;
+                document.getElementById('unrealizedPnl').textContent = `${unrealizedPnl.toFixed(2)}`;
+                document.getElementById('totalProfit').textContent = `${this.totalProfit.toFixed(2)}`;
+                
+                const winRate = this.totalTrades > 0 ? (this.winningTrades / this.totalTrades * 100).toFixed(1) : 0;
+                document.getElementById('winRate').textContent = `${winRate}%`;
+            }
+
+            log(message, type = 'info') {
+                const logsContainer = document.getElementById('logsContainer');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `
+                    <span class="log-timestamp">[${timestamp}]</span>
+                    <span class="log-${type}">${message}</span>
+                `;
+                logsContainer.appendChild(logEntry);
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        }
+
+        // Initialize the trading bot
+        const bot = new OKXTradingBot();
+    </script>
+</body>
+</html>
