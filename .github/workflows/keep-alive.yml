@@ -2,7 +2,8 @@ name: Keep Alive
 
 on:
   schedule:
-    - cron: '0 */12 * * *'   # Every 12 hours
+    - cron: '0 */12 * * *'
+  workflow_dispatch:  # 👈 This enables the "Run workflow" button
 
 jobs:
   keep-alive:
