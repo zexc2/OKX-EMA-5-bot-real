@@ -1,0 +1,12 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'   # Every 12 hours
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping site
+        run: curl -I https://zexc2.github.io/OKX-EMA-5-bot-real/
